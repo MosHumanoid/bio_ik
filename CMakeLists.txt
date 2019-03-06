@@ -12,10 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning
   pluginlib
   roscpp
-  tf2
-  tf2_eigen
-  tf2_kdl
-  tf2_geometry_msgs
+  tf
+  tf_conversions
 )
 
 find_package(OpenMP)
@@ -72,9 +70,8 @@ catkin_package(
         moveit_ros_planning
         pluginlib
         roscpp
-        tf2
-        tf2_kdl
-        tf2_geometry_msgs
+        tf
+        tf_conversions
 )
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

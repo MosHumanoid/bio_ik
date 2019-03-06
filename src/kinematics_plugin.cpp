@@ -51,7 +51,6 @@
 #include <urdf/model.h>
 #include <urdf_model/model.h>
 
-#include <tf2_eigen/tf2_eigen.h>
 #include <eigen_conversions/eigen_msg.h>
 //#include <moveit/common_planning_interface_objects/common_objects.h>
 #include <moveit/kinematics_base/kinematics_base.h>

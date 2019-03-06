@@ -37,16 +37,13 @@
 #include <vector>
 
 #include <Eigen/Dense>
-#include <tf2/LinearMath/Vector3.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_kdl/tf2_kdl.h>
+#include <tf_conversions/tf_kdl.h>
 
 namespace bio_ik
 {
 
-typedef tf2::Quaternion Quaternion;
-typedef tf2::Vector3 Vector3;
+typedef tf::Quaternion Quaternion;
+typedef tf::Vector3 Vector3;
 
 struct Frame
 {
@@ -54,28 +51,28 @@ struct Frame
     double __padding[4 - (sizeof(Vector3) / sizeof(double))];
     Quaternion rot;
     inline Frame() {}
-    inline Frame(const tf2::Vector3& pos, const tf2::Quaternion& rot)
+    inline Frame(const tf::Vector3& pos, const tf::Quaternion& rot)
         : pos(pos)
         , rot(rot)
     {
     }
     explicit inline Frame(const KDL::Frame& kdl)
     {
-        pos = tf2::Vector3(kdl.p.x(), kdl.p.y(), kdl.p.z());
+        pos = tf::Vector3(kdl.p.x(), kdl.p.y(), kdl.p.z());
         double qx, qy, qz, qw;
         kdl.M.GetQuaternion(qx, qy, qz, qw);
-        rot = tf2::Quaternion(qx, qy, qz, qw);
+        rot = tf::Quaternion(qx, qy, qz, qw);
     }
     explicit inline Frame(const geometry_msgs::Pose& msg)
     {
-        tf2::fromMsg(msg.orientation, rot);
-        pos = tf2::Vector3(msg.position.x, msg.position.y, msg.position.z);
+        tf::quaternionMsgToTF(msg.orientation, rot);
+        pos = tf::Vector3(msg.position.x, msg.position.y, msg.position.z);
     }
     explicit inline Frame(const Eigen::Isometry3d& f)
     {
-        pos = tf2::Vector3(f.translation().x(), f.translation().y(), f.translation().z());
+        pos = tf::Vector3(f.translation().x(), f.translation().y(), f.translation().z());
         Eigen::Quaterniond q(f.rotation());
-        rot = tf2::Quaternion(q.x(), q.y(), q.z(), q.w());
+        rot = tf::Quaternion(q.x(), q.y(), q.z(), q.w());
     }
 
     inline const Vector3& getPosition() const { return pos; }
@@ -95,24 +92,25 @@ public:
 
 inline void frameToKDL(const Frame& frame, KDL::Frame& kdl_frame)
 {
-    kdl_frame.p.x(frame.pos.x());
-    kdl_frame.p.y(frame.pos.y());
-    kdl_frame.p.z(frame.pos.z());
-    kdl_frame.M = KDL::Rotation::Quaternion(frame.rot.x(), frame.rot.y(), frame.rot.z(), frame.rot.w());
+    KDL::Rotation kdl_rot;
+    KDL::Vector kdl_pos;
+    tf::quaternionTFToKDL(frame.rot, kdl_rot);
+    tf::vectorTFToKDL(frame.pos, kdl_pos);
+    kdl_frame = KDL::Frame(kdl_rot, kdl_pos);
 }
 
 template <size_t i> const Frame Frame::IdentityFrameTemplate<i>::identity_frame(Vector3(0, 0, 0), Quaternion(0, 0, 0, 1));
 
 static std::ostream& operator<<(std::ostream& os, const Frame& f) { return os << "(" << f.pos.x() << "," << f.pos.y() << "," << f.pos.z() << ";" << f.rot.x() << "," << f.rot.y() << "," << f.rot.z() << "," << f.rot.w() << ")"; }
 
-__attribute__((always_inline)) inline void quat_mul_vec(const tf2::Quaternion& q, const tf2::Vector3& v, tf2::Vector3& r)
+__attribute__((always_inline)) inline void quat_mul_vec(const tf::Quaternion& q, const tf::Vector3& v, tf::Vector3& r)
 {
     double v_x = v.x();
     double v_y = v.y();
     double v_z = v.z();
 
-    // if(__builtin_expect(v_x == 0 && v_y == 0 && v_z == 0, 0)) { r = tf2::Vector3(0, 0, 0); return; }
-    // if(v_x == 0 && v_y == 0 && v_z == 0) { r = tf2::Vector3(0, 0, 0); return; }
+    // if(__builtin_expect(v_x == 0 && v_y == 0 && v_z == 0, 0)) { r = tf::Vector3(0, 0, 0); return; }
+    // if(v_x == 0 && v_y == 0 && v_z == 0) { r = tf::Vector3(0, 0, 0); return; }
 
     double q_x = q.x();
     double q_y = q.y();
@@ -148,7 +146,7 @@ __attribute__((always_inline)) inline void quat_mul_vec(const tf2::Quaternion& q
     r.setZ(r_z);
 }
 
-__attribute__((always_inline)) inline void quat_mul_quat(const tf2::Quaternion& p, const tf2::Quaternion& q, tf2::Quaternion& r)
+__attribute__((always_inline)) inline void quat_mul_quat(const tf::Quaternion& p, const tf::Quaternion& q, tf::Quaternion& r)
 {
     double p_x = p.x();
     double p_y = p.y();
@@ -173,7 +171,7 @@ __attribute__((always_inline)) inline void quat_mul_quat(const tf2::Quaternion& 
 
 __attribute__((always_inline)) inline void concat(const Frame& a, const Frame& b, Frame& r)
 {
-    tf2::Vector3 d;
+    tf::Vector3 d;
     quat_mul_vec(a.rot, b.pos, d);
     r.pos = a.pos + d;
     quat_mul_quat(a.rot, b.rot, r.rot);
@@ -186,7 +184,7 @@ __attribute__((always_inline)) inline void concat(const Frame& a, const Frame& b
     concat(tmp, c, r);
 }
 
-__attribute__((always_inline)) inline void quat_inv(const tf2::Quaternion& q, tf2::Quaternion& r)
+__attribute__((always_inline)) inline void quat_inv(const tf::Quaternion& q, tf::Quaternion& r)
 {
     r.setX(-q.x());
     r.setY(-q.y());
